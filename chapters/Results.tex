@@ -1,0 +1,127 @@
+\chapter{Results}
+
+\section{Experimental Setup}
+
+To understand the differences between the juicy and juice-less versions of POOP-SNOOP and evaluate my prototype, two experiments were executed. 88 Cal Poly undergraduate students and professors anonymously reviewed only the ``juicy" version of the game while 45 students and professors anonymously reviewed only the ``juice-less" version. In a separate experiment, a separate group of twelve Cal Poly students reviewed both ``juicy" and ``juice-less" versions of the game side-by-side while accompanied by a proctor.
+
+The ``juicy" and ``juice-less" prototypes contained exactly the same text, shapes, slides, and order. The intension was to isolate juiciness, and the specific differences were identified in the Implementation Section. In the prototype, the users first completed the tutorial section which led directly into a introductory level for participants to utilize their new skills. When the puzzle had been arranged in the optimal solution, they were told that the best solution had been solved, though they were still allowed to continue playing that puzzle.
+
+\subsection{A/B Testing}
+
+To gather subjects, an opportunity to participants was presented to four classrooms of 20-30 students. More participants were only given the option to participate via email. All participants were given an introduction verbally or via email. The introduction briefly outlined the purpose of citizen science games, and basic instructions to complete. The essential instrutions were embedded in the game itself. 
+
+Within the game, subjects were asked to fill out a anonymous feedback form after the tutorial section and then another anonymous feedback form after playing an introductory level. The anonymous feedback forms used can be found in the appendix.
+
+\subsection{Focus Group Testing}
+
+Ten of the focus group members study a design-related subject, but none of them were involved in a computer science related field. Zero of these participants had played a citizen science game before.
+
+Each focus group member played both versions of the prototype while being observed. They were allowed to ask questions about clarifications and encouraged to speak about their emotional response to the prototype while they played. Half of the subjects played the juiceless version first, and the second half played the juicy version first. Before the subjects were given a prototype, they were told about the nature of citizen science games some details about the origins of the data used in POOP-SNOOP. Zero participants filled out the surveys, each only provided verbal feedback.
+
+\section{Evaluation}
+
+The most significant observations from the A/B testing are:
+
+\begin{enumerate}
+
+\item Users completing the ``juicy" tutorial tended to have higher confidence about solving POOP-SNOOP puzzles.
+
+\item Users completing the ``juicy" tutorial indicated more interest continuing after the tutorial to solve POOP-SNOOP puzzles.
+
+\item Users playing the ``juicy" introductory level found their puzzle less difficult.
+
+\item Users playing the ``juicy" introductory level indicated that the tutorial was more helpful than ``juiceless" players.
+
+\item Users playing the ``juicy" level indicated more enjoyment of POOP-SNOOP than ``juiceless" players. 
+
+\item Frustration with fundamental game mechanics and tutorial unclarity was voiced by more ``juiceless" players than ``juicy" players.
+
+\item More ``juicy" prototype players specifically mentioned encouraging graphics.
+
+\end{enumerate}
+
+From the focus group study, observations concluded: 
+
+\begin{enumerate}
+
+\item The chevrons were helpful in indicating the primary mechanic in both ``juicy" and ``juiceless" prototypes.
+
+\item The ideal POOP-SNOOP would be comprised of features from both the ``juicy" and ``juiceless" prototypes.
+
+\item There was excessive feedback when making changes to the solution to the point that it interfered with solving the puzzle.
+
+\item The incremental ``juicy" feedback regarding different sized solutions was not effective.
+
+\end{enumerate}
+
+\subsection{A/B Testing}
+
+The two surveys given during each A/B testing session, the first after the tutorial and the second after the introductory level. The appendix lists the two surveys distributed. Table \ref{table:tutorialsurvey} is the summary of these qualitative results from the post-tutorial survey. Table \ref{table:gamesurvey} is the summary of quantitative results from the introductory level of POOP-SNOOP. Participants of the ``juiceless" experiment completed 58 post-tutorial surveys and 43 final surveys. Participants of the ``juicy" experiment completed 54 post-tutorial surveys and 66 final surveys. It is not clear why there were not an equal number of surveys completed for each version of POOP-SNOOP, but without any insight into the reasons for the discrepancy none of the results were discarded.
+
+
+\begin{table}
+\begin{center}
+
+\begin{tabular}{|>{\centering}p{3cm}|c|c|c||c|}
+\hline 
+Question&  Mean Juicy&  Mean Juiceless&  Difference&  p-value
+\tabularnewline
+\hline 
+How confident do you feel about solving a POOP-SNOOP puzzle?&  3.0&  2.3&  1.3&  0.003
+\tabularnewline
+\hline 
+How interested are you in solving a POOP-SNOOP puzzle?&  3.3&  2.5&  0.8&  3.1E-5 
+\tabularnewline
+\hline 
+\end{tabular}
+
+\caption[Post-tutorial survey results]{Comparison of the difference in confidence and interest between players of the ``juicy" and ``juiceless" prototypes.}
+\label{table:tutorialsurvey}
+\end{center}
+\end{table}
+
+All quantitatively measured results from the surveys were statistically significant (p-value $<$ 0.05), the results are listed in Table \ref{table:tutorialsurvey} and Table \ref{table:gamesurvey} and summarized in the beginning of this chapter.
+
+In the ``juiceless" version, 45 of 58 responses cited confusion about game mechanics, purpose, or goal, where only 17 of 54 ``juicy" participants agreed. There may be a connection between making interesting tutorial levels that increases players attention to learning the game or reading text. Players found the ``juicy" version more enjoyable, and 5 of 66 responses specifically mentioned that the ``juicier" graphics were encouraging and helpful, though they had not seen the ``juiceless" version.
+
+Surprisingly, 6 of 43 ``juiceless" players specifically mentioned ``visually clean", ``great interface", ``clean presentation", or praised the visual design. Another astonishing comment from the ``juiceless" survey suggested, ``You need to make the game juicy" and included a link to the talk by Martin Jonasson \cite{juiceitorloseit} that inspired this project. Two other comments in the non-juicy version also mentioned adding color and doing more user testing. These comments were not ordinary, most comments did not mention anything about the design or the ``juicy" design of POOP-SNOOP.
+
+\begin{table}
+\begin{center}
+
+\begin{tabular}{|>{\centering}p{3cm}|c|c|c||c|}
+\hline 
+Question&  Mean Juicy&  Mean Juiceless&  Difference&  p-value
+\tabularnewline
+\hline 
+Did you enjoy POOP-SNOOP?&  3.0&  2.4&  0.6&  0.00147
+\tabularnewline
+\hline 
+Was the puzzle difficult?&  2.4&  3.5&  1.1&  2.8E-7
+\tabularnewline
+\hline 
+Was the tutorial clear and helpful?&  2.4&  1.7&  0.7& 0.00045
+\tabularnewline
+\hline 
+\end{tabular}
+
+\caption[Post-game tutorial results]{Comparison of the difference in enjoyment, perceived difficulty, and understanding between players of the ``juicy" and ``juiceless" prototypes.}
+\label{table:gamesurvey}
+\end{center}
+\end{table}
+
+\subsection{Focus Group Testing}
+
+In every focus group interview, each subject came to the conclusion that the ideal puzzle would contain features of both the juicy and non-juicy versions (overview result 2). When asked to make a choice about which version they would prefer to play another puzzle with, four subjects responded ``juicy" and eight responded ``juiceless".
+
+Subjects tended to prefer the non-juicy version, even if they had been given the juicy version first. Users cited the distracting ``juicy" feedback interfered with their ability to solve puzzles. Users preferred the quicker response of the ``juiceless" version.
+
+Players quickly became annoyed by the overwhelming response of the system for every time they moved the puzzle orientation (overview point 3). The first time the rewarding animations happened, subjects were excited, but it became repetitive quickly. 
+
+The scoring animations were slightly more intense if the score was larger, but no subjects noticed the different between any of the animations (overview point 4). The range of possible solutions was between 2 and 4, restricting the number of animations. There was not enough variation between the response to solutions and the response was too intense for every solution. Participants suggested that the background animation should only reward them the first time they create large solution.
+
+The scoring animations caused player confusion when removing grid blocks that were not part of the solution. Four participants explicitly stated that they thought the puzzle was restarting or changing when the blocks dissapeared and reappared. The emphasis of the solution was inadequate; no players mentioned specifically preferring this behavior.
+
+The chevrons for the diagonal squares were effective in both the juicy and juiceless versions (overview point 1). Early in our prototype process, the grid was simply an array of plain squares with no special markings. There was consistantly a problem with people understanding the core mechanic of POOP-SNOOP: the diagonal drag. Because the grid looked square, subjects always attempted to drag row-column pairs in any direction and simply allowing motion only in the diagonal direction never caught on. Eventually, the idea for chevrons on the diagonal was implemented and to my surprise ten out of twelve focus group participants naturally grabbed the squares along the diagonal and dragged them in the correct direction. The two that didn't understand the dragging motion immediately did not interact with the tutorial phases until they were forced too and seemed to skip the instruction about movement.
+
+The lack of colors in the ``juiceless" often caused confusion in the tutorial because the grays were indiscernible. More subjects interacted with the ``juicy" tutorial when the puzzle first appeared on screen. The three observed participants who played with POOP-SNOOP before the introductory level started had the most success with understanding.

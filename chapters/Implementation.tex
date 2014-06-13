@@ -1,142 +1,147 @@
 \chapter{Implementation}
-\label{sec:implementation}
-This section describes the implementation of the design discussed in Section~\ref{sec:design} built on top of the Wayland display server protocol. This implementation, called `Motorcar', is free and open source and available on GitHub \cite{motorcar-github}. It is intended both to demonstrate concretely that such a design is practical to implement, as well as to serve as a functional 3D windowing system and provide a modular core of that can form the basis of further research into the concept of 3D windowing systems.
 
-\section{Wayland Protocol Extensions}
+The goal of POOP-SNOOP is to provide an interface that motivates non-scientist citizens to solve puzzles to further the knowledge base created by the Biology Department at Cal Poly, their work gathering and pyroprinting E. coli, and analyzing that information with various tools including CPLOP. 
 
-The design outlined in Section~\ref{sec:design} requires several pieces of functionality not provided by the core Wayland protocol (like synchronization of the view and projection matrices between the compositor and the clients) and functionality that is not supported by the subsystems on which Wayland in built (like the ability for the compositor to access client depth buffers), so an implementation on top of Wayland requires several extensions to the Wayland protocol to provide 3D windowing services to clients (see Section~\ref{sec:wayland-protocol} for a brief introduction to the Wayland protocol).
+From the beginning, the goal was to introduce exaggerated juiciness into a citizen science game. The core mechanic of POOP-SNOOP is simple and there is plenty of room for modification many possible directions. A web browser based game was chosen to maximize possible participation; the prototypes are both created using vectorized graphics with help from a basic tweening library. 
 
-These protocol extensions form the basis of the 3D windowing mechanism, and are not exclusive to the compositor framework or client applications presented here. Any Wayland compositor or client could hypothetically support these extensions, allowing the basic 3D windowing mechanism to be extended to a variety of applications and integrated with client applications and tool kits as needed. The extensions are designed to be simple and flexible, so that any shortcomings of the compositor and client frameworks presented here do no limit the adoption of the 3D windowing techniques which they implement.
+The most popular citizen science projects are hosted on Zooniverse \cite{borne2011zooniverse}, who indicate that over one million participants have helped solve science with their website although Zooniverse is a collection of dozens of games from a variety of research projects and designers \cite{borne2011zooniverse}. On the other hand, Fold-it requires an installation and claims 57,000 have participated \cite{cooper2010challenge}.
 
-\subsection{Interfaces}
+\section{Mechanics} 
 
-The protocol extensions used by Motorcar define several interfaces which the compositor uses to advertise and provide 3D windowing services to clients. Each of these interfaces is designed to provide one or more of the elements of the architecture outlined in Section~\ref{sec:design}, which is designed to require minimal extensions of existing windowing systems, so the interfaces outlined here are relatively simple.
+The puzzle itself is very reminiscent of the spreadsheet biologists originally manipulated to visually identified strains.
 
-\subsubsection{Motorcar Shell}
+\subsection{Modified self-similarity matrix}
 
-The first interface, `motorcar{\_}shell' represents a compositor shell that supports 3D windowing of the style discussed in this thesis, and  it has a single request, `get{\_}motorcar{\_}surface', which takes an existing Wayland surface (wl{\_}surface) as an argument and returns a new Motorcar surface which is associated with the argument Wayland surface within the compositor.  The compositor creates a single instance of this interface at startup, and clients can then use this instance to create a Motorcar surface object from the Wayland surfaces which they have already created.
+The original spreadsheet consisted of E. coli isolates organized into a self-similarity matrix of isolates in each row and column. The intersection between a row and a column compared the two isolates; a self-similarity matrix to compares a dataset to itself. To identify strains within a dataset, both the 16S-23S region and the 23S-5S regions of each pyroprint. In the standard self-similarity matrix, there are two comparisons between each different member of the dataset. Each E. coli isolate must be compared on both the 16S-23S region and the 23S-5S region to be considered in the same strain, therefore by modifying the self-similarity matrix to account for these two different comparisons the modified self-similarity matrix satisfies our requirement.
 
-\subsubsection{Motorcar Surface}
+Every E. coli isolate in our dataset is compared to each other dataset twice--one comparison between the 23S-5S region and one comparison between the 16S-23S region. E. coli isolates are compared to themselves once, but must be in the same strain as themselves by identity. 
 
-The interface `motorcar{\_}surface' represents a 3D window of the kind discussed in this thesis. It allows the client to request the type of 3D window desired (for example a cuboid or portal window) and declares events which allow the compositor to inform the client of the 3D window's bounds and transform in space and to deliver 3D input events to the client. Because the instantiation of this interface takes a Wayland surface as an argument, it allows the compositor to identify which surfaces are being used as Motorcar surfaces and composite them appropriately. When a Motorcar surface is created the compositor calculates the buffer size needed to hold the images (and depth buffers) for all of the viewpoints and resizes the surface to these dimensions.
+The self-similarity matrix must maintain the same order and length in both dimensions. An E. coli isolate is always compared to itself along the diagonal.
 
-\subsubsection{Motorcar Viewpoint}
-\label{sec:viewpoint}
+The comparison between two regions of DNA in an isolate is represented by a value between 0 and 1. The threshold for strain similarity is a comparison value of 0.95 or greater, and a strain can only consist of E. coli isolates that each compare about the strain similarity threshold on both regions of compared DNA. See section \ref{strain-identification} for more detail.
 
-Perhaps the most important of the interfaces defined in the Motorcar extensions, `motorcar{\_}viewpoint' represents a virtual camera in the 3D interface space managed by the compositor (usually corresponding to one of the user's eyes), and provides the mechanisms needed to ensure that the client's 3D content is projected in a manner which allows it to be properly composited with 3D content from other clients and the compositor. This interface has no requests, only events which allow the compositor to inform clients of the parameters for the viewpoint which it represents.
+\subsection{Identifying strains}
 
-The compositor creates a global instance of this interface for each viewpoint from which it is drawing the scene, allowing the client to produce correct output for each of these viewpoints. The protocol imposes no limit on the number of viewpoints or how the images produced by clients for each viewpoint are laid out within the surface, and allows viewpoints to be added or removed at runtime if necessary, leaving these things up to the compositor implementation. The example compositor presented here supports only a single user and a single stereoscopic display, and does not support hotplugging displays, so it will never instantiate any viewpoints other than the two it creates at startup (one for each of the user's eyes), but this limitation is not reflected in the protocol itself. The Motorcar viewpoint interface defines three events. 
+Originally, identifying strains was the process of manually swapping two columns then carefully swapping the corresponding two rows to maintain the self-similarity matrix. Strains emerge when perfectly square clusters of DNA comparisons align along the diagonal. Metaphorically this indicates that each isolate in the indicated rows (the columns are the same isolates) could be in a strain together.
 
-The first two events, `view{\_}matrix' and `projection{\_}matrix', allow the compositor to update the view and projection matrices used by the client, and are sent once when the client connects, and again every time one of the matrices changes. These matrices are updated by separate events because while the view matrix changes every time the user's head moves, the projection matrix changes only when the user's head move relative to the display surface, which never happens when using an HMD (since it is strapped to their head) so the projection matrices for HMD viewpoints never changes at runtime. Some other types of immersive displays, like CAVEs, would require that the projection matrix change every time the users head moves, and while this is compatible with the protocol, it is not supported by the example compositor presented here.
+The goal of POOP-SNOOP is to encourage players to try different organizations of the puzzle to find the best possible strain. The possible solution set size is n-squared, which could be easily traversed algorithmically. This game is completely unnecessary, but an example of a potential scientific discovery puzzle game.
 
-The third event, called `view{\_}port', informs the client of where in the surface buffer to draw the output for the viewpoint generating the event. This allows clients to send the output of multiple viewpoints to the compositor using a single surface, which eliminates the need to synchronize updating multiple surfaces. The view port events actually defines two viewports for each viewpoint, one for the color image and one for the depth buffer, which is needed to correctly composite the 3D content from different clients (see Section~\ref{sec:depth-compositing} for details). It may seem unusual that the color and depth buffers be given different view ports in the same image, since they represent information about the same set of pixels, but this is tragically unavoidable for reasons that are somewhat complicated.
+\section{POOP-SNOOP}
 
-\paragraph{EGL and the Depth View Port}
-\label{sec:depth-viewport}
+\begin{table}
+\begin{center}
 
-The use of a second view port in the color buffer to transfer the contents of the depth buffer from the clients to the compositor is a significant workaround resulting from the inability of Wayland EGL to make client depth buffers accessible to the compositor. Wayland EGL allows clients to create OpenGL contexts in which the color buffer attached to the default framebuffer can be used by the compositor as a texture without ever needing to copy the memory which backs the color buffer, making it very desirable for clients which are drawing their window on the GPU (as any 3D application would certainly be doing). However, Wayland EGL does not give the compositor the same kind of access to the depth buffer attached to the default framebuffer in the client's context, which presents a significant hurdle. 
-	
-This is overcome by doubling the size of the color buffer attached to the client's default framebuffer, drawing into a framebuffer object whose color and depth buffers are backed by textures, and then texturing both the color buffer and the depth buffer from the framebuffer object into the color buffer attached to the default framebuffer. The compositor can then extract the original depth and color buffers from the client color buffer and write them back into the depth and color buffers of a new framebuffer, which it can then composite with the 3D scene based on the contents of the depth buffer. This introduces a significant amount of rendering overhead and is the only part of this design that cannot currently be implemented cleanly on top of Wayland. Solving this problem efficiently, by giving the compositor direct access to the depth buffer attached to the client's default framebuffer, is probably possible but would likely require modification of the implementation of Wayland EGL within Mesa. This is considered by the author to be the single most pressing area of future work on this system.
+\begin{tabular}{|>{\centering}p{3cm}|>{\centering}p{5cm}|>{\centering}p{5cm}|}
+\hline 
+Category&  Juicy&  Juiceless
+\tabularnewline
+\hline 
 
-\begin{figure}[ht!]
-\centering
-\includegraphics[width=1.0\textwidth]{images/depth-buffer-operation.png}
-\caption{A high level conceptual illustration of the depth compositing process. Clients draw their depth and color images into the same, double-height color buffer, which the compositor then draws back into normal sized depth and color buffers, and then composites with other 3D clients using the traditional depth test. Lighter color in the depth images indicates that those pixels are further away.}
+Puzzle initialization&  Puzzle descends into place&  No animation
+\tabularnewline
+\hline 
+
+Mousedown row/column&  Bouncing animation, simulated depth&  Black outline
+\tabularnewline
+\hline 
+
+Mouseover row/column&  Indicator animation pointing in direction of travel&  Black indicator
+\tabularnewline
+\hline 
+
+Dragging row/column&  Other rows slide into new position&  No animation
+\tabularnewline
+\hline 
+
+Mouseup row/column&  Animation highlighting scored cluster, background effects&  No animation
+\tabularnewline
+\hline 
+
+Tutorial text&  Slides and fades, fonts, positioning&  No animation
+\tabularnewline
+\hline
+
+Tutorial slides& Various animations per slide&  No animation
+\tabularnewline
+\hline
+
+\end{tabular}
+
+\caption[``Juicy" elements of POOP-SNOOP prototypes]{Summary of differences between ``juicy" and ``juiceless" POOP-SNOOP puzzle and tutorial.}
+\label{table:juice}
+\end{center}
+\end{table}
+
+The essential mechanic of POOP-SNOOP is essentially reordering objects in a single dimensional list while observing their relationship with its local cluster. This data is easily represented as a spreadsheet-like grid such that players can associate with the datastructure.
+
+Unlike many games including Fold-it \cite{cooper2010challenge} or Juicy Breakout \cite{juiceitorloseit}, there isn't a specific physical metaphor for a real object that POOP-SNOOP is emulating. A spreadsheet can be thought of as a grid, or a matrix, but other than in computer applications people do not often deal with these structures. Still, in order to make this game enticing, design hints needed to be incorporated.
+
+\subsection{The Grid}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=150mm]{images/grid.pdf}
+\caption[Differences between game layout in each prototype]{The left image is the ``juiceless" prototype. Circles indicate the current solution, black outline indicate the selected row/column pair. On the right is the ``juicy" prototype with the selected row/column pair.}
+\label{fig:grid}
+\end{center}
 \end{figure}
 
-The process of encoding the depth buffer contents in the color buffer is further complicated by the differences between the format of the depth buffer and color buffer. The example compositor uses a color format that allocates eight bits for for each of four color channels (red, green, blue, and alpha, which is used here for transparency) and a 16 bit integer depth format. In order to transfer the depth information without loss of precision the system presented here samples the depth buffer on the client side as a 32 bit float, then uses a technique taken from \cite{pack-float-rgba} to pack this float into a four-vector which is then written into the color buffer and unpacked back into the 32 bit float on the compositor side (using the reverse technique from \cite{pack-float-rgba}) and written back into the depth buffer. 
+Spreadsheets remind players of work and many people associate games in a completely different category than work. To incorporate the grid structure of spreadsheets without the work, the design followed a clean grid structure. Elements in the grid are the same size to represent that they are essentially representations of the same objects in our puzzle. The simulated space of POOP-SNOOP should imply a table or flat plain surface which doesn't interfere with the puzzle. In figure \ref{fig:grid}, each comparison between isolates is represented by a block--light gray is matching, dark gray is not matching.
 
-\subsection{Current Protocol Limitations}
-In its current state the Motorcar protocol extensions has very basic support for 3D input events. The only implemented input events are essentially the 3D equivalent of mouse events, such as button pressed attached to a six degree of freedom (6DOF) transform, or changes in this 6DOF transform. These kinds of events form a good extension of mouse events to 3D, and map well onto the input device used in this implementation (the Razer Hydra 6DOF handset), but they certainly do not encompass all possible 3D input. Other broad classes of input events include skeleton tracking and gesture events, and these types of events could certainly be delivered over additional Wayland protocol extensions. However, an abstraction layer for these types of events would require the development and integration of substantial systems which are well outside the scope of this thesis, so they are excluded from this version of the Motorcar protocol extensions.
+Though it was originally a bit sarcastic, Petri Puhro \cite{juiceitorloseit} suggested personality by adding faces and adjusting their eyes to elicit emotional response. In figure \ref{fig:grid}, comparisons in the ``juicy" prototype contributing to the solution are given a smiling face. The faces of the boxes are visible when they are part of a larger cluster. The intent is that the player would be encouraged to put as many ``happy" blocks together to find the largest solution. In the non-juicy version, dark circles indicated cells that were part of a solution.
 
-\section{Client Operation}
+\subsection{Interaction}
 
-This section describes the operation of 3D clients using the Motorcar protocol extensions, and most of this is firmly grounded in the way that the sample 3D clients provided by Motorocar operate. The operation of 2D clients is not discussed in detail here because it is literally identical to standard Wayland client operation, which is a key feature of this system because it allows unmodified 2D clients to window into the 3D interface space without even being aware of its three dimensional nature. The example Motorcar client code is derived from the weston-simple-egl client distributed with Weston (the Wayland reference compositor), but adapted from C to C++ and repackaged as an interface which can be implemented by individual clients with minimal effort.
+Players need to reorganize the grid easily and play with its orientation. The most fundamental metaphor for this in computer applications is clicking and dragging. If a computer user were to click an icon from the desktop and drag it, they could change its position. Unfortunately, the relationships in the grid require that the entire row and column move with it. Without explicitly connecting them in some way, the intent is that players would be able to observe the results of their action as part of the real-time feedback loop and learn the mechanic this way. As players click and drag, the grid reorganizes around them to immediately reflect the implications of their decision.
 
-When the client connects to the compositor it receives creation events for all of the global objects instantiated by the compositor, including the Motorcar shell and all of the Motorcar viewpoints. The client can use the Motorcar shell to create a Motorcar surface from any Wayland surfaces it create, which tells the compositor to handle that surface as a Motorcar surface (since these are composited differently than normal surfaces) and allows the compositor to send 3D input events to that client, which the client can listen for if it chooses. 
-
-The client binds each viewpoint and creates a data structure to represent it internally, which it then attaches to the event listener for that viewpoint. The compositor responds to the binding process by sending the client the current state of the viewpoint (its view and projection matrices and its view port) to the client, which the client then stores in the data structure associated with that viewpoint.
-
-Every time the client gets the frame callback indicating that it should draw a new frame, it iterates over all of the viewpoints and draws it's scene however it likes with the view and projection matrices from that view point into the viewpoint's color view port, then copies the depth buffer for that viewpoint into the viewpoint's depth view port. Once this has been done for each of the viewpoints the client calls eglSwapBuffers, which swaps the surfaces front and back buffers and informs the compositor that surface is ready to be updated.
-
-\section{Compositor Operation}
-
-This section describes the operation of the Motorcar compositor implemented for this thesis. There are other ways that a Motorcar protocol compliant compositor could function, but enumerating all of these designs is an intractably large task and likely would not be useful anyway, so instead this section focuses on the concrete aspects of the design that was implemented and is known to work. The operation of the compositor is complex, and an exhaustive discussion of this software that implements it would be obscenely long, so the discussion here is limited to the components of the compositor which are relevant to the mechanism by which is provides 3D windowing services to clients. Users seeking a more comprehensive understanding of the structure of this software are directed to the documentation in the GitHub repository \cite{motorcar-github}.
-
-\subsection{The Motorcar Compositor Framework}
-
-This thesis presents a modular C++ framework for Motorcar compositors designed to be extremely flexible in the way that 3D windowing services are provided to clients. The main function of a compositor built with this framework essentially just initializes components which implement interfaces defined in the framework and attaches them to one another over these interfaces. This allows components which do not meet the needs of a particular compositor to be replaced by ones that do without needing to rebuild the compositor from scratch, and it allows new components to be defined and attached in natural ways. Examples of modules which would likely be replaced are device specific classes (which implement device interfaces for things like 3D pointing devices or head mounted displays on top of device specific API's) and the window manager (which controls how input events are directed to clients and how surfaces are laid out in 3D when they are mapped).
-
-\subsubsection{The QtWayland Motorcar Compositor}
-
-The Motorcar compositor implemented for this thesis uses several core components built on top of the QtWayland Compositor API. QtWayland is a module in the Qt toolkit which provides a Wayland backend for graphical Qt applications, as well as providing a simple framework for building Wayland compositors on top of Qt. All of the QtWayland dependent functionality in this compositor is isolated within a small set of classes which hide the QtWayland functionality behind interfaces defined in the Motorcar framework, which could hypothetically allow it to be separated and allow Motorcar compositors to be built without a Qt dependency, though this is not necessarily desirable.  
-
-QtWayland abstracts almost all of the interaction with the Wayland protocol itself (with the exception of interactions with the Motorcar protocol extensions) behind a set of C++ classes which form the QtWayland Compositor interface, and most of these classes interact with the Motorcar compositor framework through thin wrapper classes which exist primarily to isolate the Qt dependency. It handles almost all of the behaviour needed to correctly interact with 2D clients, allowing the Motorcar compositor framework to focus on embedding the 2D clients' surfaces in the 3D space and correctly sending these surfaces input events in their local coordinate system. Additionally, Qt provides a platform independent OpenGL context, which allows QtWayland compositors to run within other Wayland Compositors, within an X environment, or even directly on top of the user interface hardware abstractions in the Linux kernel.
-
-\subsubsection{The Compositor Scene Graph}
-
-
-
-The compositor maintains an internal scene graph which contains all spatial elements in the 3D interface space. This includes surfaces (for both 2D and 3D windows), viewpoints, displays, input devices, models of the user skeleton, and any graphical interface elements drawn by the compositor (for example window decorations or docks). All scene graph classes inherit from a root class called SceneGraphNode, which provides spatial relationship primitives as well as defining a doubly linked tree structure between nodes (which forms the actual graph of the scene) and provides mechanisms for traversing this tree. 
-
-All scene graph nodes have a single parent and a list of children, and these are made accessible so that other parts of the compositor can manipulate the scene graph as they see fit, and these two members form the core of the functionality that the SceneGraphNode class provides. The scene graph is rooted in an instance of a special scene graph class called Scene (which is unique in being allowed to have a null parent), and this forms the primary interface between scene graph classes (which can always access the scene root by traversing up the scene graph) and classes like the window manager, motorcar shell, and display server modules (which typically are constructed with a pointer to the scene on which they operate).
-
-\begin{figure}[ht!]
-\centering
-\includegraphics[width=1.0\textwidth]{images/scene-graph-classes.png}
-\caption{The inheritance graph for the classes composing the scene graph. Note the division between virtual nodes (which can be children of any other node) and physical nodes (which can only be children of other physical nodes) to reflect the impossibility of a physical object being attached to a virtual one.}
-\label{fig:scenegraph-classes}
+\begin{figure}
+\begin{center}
+\includegraphics[width=100mm]{images/chevron.pdf}
+\caption[Differences between chevrons in each prototype]{On the left, ``juicy" chevrons when unselected and selected. On the right, ``juiceless" chevrons when unselected and selected.}
+\label{fig:chevrons}
+\end{center}
 \end{figure}
 
-\paragraph{Traversing the Scene Graph}
+The ability to drag squares should be made obvious to players. The pieces of the grid are all important to the current and possible solutions, but only the pieces along the diagonal are interactive. To exhibit this characateristic, chevrons pointing in their potential range of travel were added. The chevrons intended to manipulate a physically rough surface or small bumps and the arrows indicated movement. In figure \ref{fig:chevrons}, the differences between the ``juicy" chevron and ``juiceless" chevron are demonstrated; the juicy chevron is animated.
 
-The scene graph is designed to be traversed several times per frame, and the SceneGraphNode class provides virtual methods which allow implementing classes respond to each of these traversals appropriately without needing to implement the traversal logic themselves. The first traversal, invoked immediately prior to sending the current viewpoints to the clients and requesting new data from them, is intended to allow implementing classes to do per-frame work prior to rendering (for example animation updates or event generation by devices) and is handled by overriding SceneGraphNode::handleFrameBegin(). The second traversal, invoked once per display per frame, is intended to allow implementing classes to render their content to the display and is what drives surface classes to perform the compositing operations discusses in Section~\ref{sec:3d-compositing}. This traversal can be handled directly by overriding SceneGraphNode::handleFrameDraw(), but most classes that respond to this traversal should inherit Drawable and override Drawable::draw() instead. The third and final traversal, invoked every frame after drawing is completed and handled by overriding SceneGraphNode::handleFrameEnd(), in intended to allow any implementing classes to clean up any resources which were created during the first traversal that will not be needed in the next frame.
+In ``juicy" POOP-SNOOP, each box has a shadow and pops up off the plane of the rest of the grid when moused over. A simple opacity and shadow gives the pieces of the puzzle depth when rows intersect slightly as players rearrange the puzzle. While moving the puzzle, players can see other pieces through theirs, adding to the illusion of depth. Overall, it resemebles the metaphore for small, translucent pieces of paper. The rows and cells of the grid bounce up into a hover state as they become activated which is playful, but subtle enough to not be overwhelming. As the player actively rearranges the puzzle, they are given visual hints about their actions because the rows slide gently into their new place, rather than simply appearing in their new position. Because the movement of the rows and columns is unnatural, this behavior intends to reinforce the mechanic for new players. The objects in POOP-SNOOP do not interact with eachother, but slide past one another.
 
-\subsection{Frame Timing and Latency}
+As the boxes of the grid move, their motion is subtley enhanced by stretching and squeezing the direction of their movement. It is especially difficult to see how the puzzle changes when a column and row change orientation.
 
-This design requires that the compositor send new view matrices to its 3D clients every frame, wait for them to draw new images, and then composite these images and send them to the display before the next frame starts, so getting the timing correct is a little bit tricky and there are several possible approaches with merit. 
+\subsection{Scoring}
 
-The approach taken in this implementation is to draw the scene graph (the handleFrameDraw traversal) with the current data at the beginning of the frame, clean up the frame (the handleFrameEnd traversal), update the scene graph state (the handleFrameBegin traversal), then send the new matrices to the clients followed by the frame callbacks that tell them to draw a new frame, then wait until the next vSync event (indicating the display is done drawing) to swap the compositor buffers and restart the process. This approach favours using old client output over dropping frames in the compositor because it gives clients only the time remaining in the frame after compositing completes to update their content before the compositor simply uses the output it already has in memory. This ensures that no single client can reduce the compositor frame rate, but it also means that 3D clients can get out of sync with the compositor, which would break the illusion of a unified 3D interface space (because out-of-sync clients would be drawn from a viewpoint that has since changed). Additionally, this means that the time it takes a movement of the user's head to affect the image drawn appropriately (referred to as `motion-to-photon latency') would include an entire extra frame's worth of time, which is undesirable in certain applications.
+Scientific discovery games exist because researchers do not know the solution to the given puzzle. Players would not normally know the solution of a POOP-SNOOP puzzle, but a message that alerted users when they solved the introductory level. In the nature of ``juicy" design, the intent was that players would be given clues other than a number to indicate their score. The size of the score itself is a very visual representation of score.
 
-An alternative approach would be to update the scene graph, send the new matrices and frame callbacks to the 3D clients, wait until all of the 3D clients have finished drawing, and only then draw the scene and clean up. This approach would minimize the motion-to-photon latency but, because it requires that the compositor wait for the clients to finish drawing, it could allow a single slow client to cause the compositor to drop frames. This approach may be more suitable for applications like immersive virtual reality video games, where only a single latency-sensitive application needs compositing, and it is probably not the most general purpose solution. As discussed in Section~\ref{sec:vr-mode}, this timing mode could potentially be toggled from the client based on its application profile, though such functionality is not yet implemented in the system presented here.
+Rearranging the puzzle consisted of a mousedown action to enable dragging, dragging the mouse to move the row-column pair, then releasing the mouse to return the grid to a resting state. As the player released their currently selected row, the intention of the game was to respond to that change and convey the current score to the player. Cluster highlighting happened simultaneously with background effects.
 
-\subsection{Three Dimensional Compositing}
-\label{sec:3d-compositing}
+Background effects are designed reward positive player behavior with exciting explosions, colors, and motion. The goal of the effects is to encourage players to keep trying new combinations and working towards the best possible solution. The effects were designed to give more feedback for larger, better solutions and less feedback for smaller solutions. Five separated effects consisting of geometric shapes and patterns animated and exploded when dragging was complete and the score was totalled; an example of these effects can be seen in figure \ref{fig:background}. The background effects lasted about two seconds and interrupted gameplay because the puzzle was hdiden. Players were able to click and end the animation early, but it was not made obvious.
 
-The core functionality of a Motorcar compositor is its ability to combine interfaces from 2D and 3D applications in a unified 3D interface space. The compositing portion of this requires that the compositor be able to draw 2D windows on planes embedded in the 3D space and be able to composite the output from 3D applications with these planes as well as with the output of other 3D applications. The first requirement is fairly straightforward (especially with the use of QtWayland), essentially boiling down to projecting and texturing quads with OpenGL, so we do not bother to discuss it in detail here. The second requirement is met with a fairly complex mechanism that forms one of the core contributions of this thesis, and this mechanism is the focus of the rest of this section.
-
-When clients create a Motorcar surface, the scene graph node representing the surface (of class WaylandSurfaceNode) is replaced by a new node with an inheriting type (class DepthCompositedSurfaceNode)  that defines the correct compositing behaviour for Motorcar surfaces. The DepthCompositedSurfaceNode class performs the compositing operations needed to make the contents of its surface appear three dimensional to the user.
-
-\subsubsection{Clipping and Depth Compositing}
-\label{sec:clipping-impl}
-
-The clipping process varies slightly depending on the type of window being clipped, but for the most part the process is identical. The term `near clipping surface' is used here to describe the surface which the everything in the window must be in front of, the term `far clipping surface' is used to describe the surface which everything in the window must be drawn in front of, and `full clipping surface' is used to describe the union of these two. For a cuboid window the near clipping surface is the three faces of the cuboid facing toward the viewpoint (the first three faces where the dot product of the face normal and the view vector is less than or equal to zero) and the far clipping surface is the other three faces of the cuboid. For portal type windows the near clipping surface is the window opening and the far clipping surface doesn't exist. The depth compositing and clipping process uses a scratch framebuffer with the same dimensions as the compositor buffer and the process described here operates once per viewpoint.
-
-This scratch framebuffer is first cleared (zeroing the red, green, blue, and alpha values), and the full clipping surface of of the window is written into the stencil buffer (such that only pixels within the projection of the clipping surface can be drawn to) with the color and depth buffers disabled. This prevents the client from drawing any fragments which can not possibly be valid because they are outside the projection of its window bounds, and substantially reduces the overhead of copying pixels because pixels disabled by the stencil buffer will simply be ignored. The next step is to draw the client buffer into the color and depth buffers of the scratch framebuffer using the late depth test (the depth image is extracted from the client color buffer, due to the problem described in Section~\ref{sec:depth-viewport}). This draws only those pixels which are closer than the far clipping surface, since those which are further away will fail the depth test. This draw is also where the stencil buffer drops all fragments outside the projection of the window. Next, the near clipping surface is drawn into the color and depth buffer with a completely zero color (including alpha), blending disabled, and the depth test reversed (so that fragments with greater depth pass the depth test). This replaces any fragments from the client image which are closer than the near clipping surface with the scratch framebuffer's clear color, effectively eliminating them. Finally, the contents of the scratch framebuffer (both depth and color) are drawn into the compositor framebuffer using the late depth test and a special fragment shader which drops fragments whose alpha values are zero, which prevents the depth of the clipping surfaces from polluting the compositor depth buffer. 
-
-This process ensures both that any fragments in the client buffer which lie outside the window bounds are discarded and that any fragments inside the window bounds are composited properly.
-
-
-\section{Test Hardware Configuration}
-
-This compositor was developed using an Oculus Rift DK1 virtual reality headset and a Sixense Razer Hydra six degree of freedom magnetic tracking handset system. The Rift provides only head orientation tracking, which does not allow proper motion parallax to be simulated (see Section~\ref{sec:motion-parallax-and-stereopsis} for details. Fortunately, the Hydra system comes with two handsets, which allows one to be used to track the head's position (by attaching it to the back of the Rift headset), while the other is used as an input device. This setup can be seen in Figure~\ref{fig:hardware-setup}.
-
-\begin{figure}[ht!]
-\centering
-\includegraphics[width=1.0\textwidth]{images/hardware-setup.jpg}
-\caption{A test subject wearing the hardware system on which this implementation was developed. Notice that one Hydra handset is held in her right hand and being used for 3D input, while the other is attached to the Rift headset and used for traking the position of her head.}
-\label{fig:hardware-setup}
+\begin{figure}
+\begin{center}
+\includegraphics[width=150mm]{images/background.pdf}
+\caption[Differences between animations in each prototype]{On the left, the animation when completing a drag in the ``juicy" prototype. On the right, the same event in the ``juiceless" prototype.}
+\label{fig:background}
+\end{center}
 \end{figure}
 
-The Oculus Rift requires a image space barrel distortion of the rendered stereo image to correct for a pincushion distortion introduced by the optics in the headset. This is performed as a final step immediately before the compositor sends the final image to the display. Clients need not even be aware of this step, which is yet another advantage of using the windowing approach described here.
+\section{Tutorial}
 
+POOP-SNOOP requires a tutorial. Feedback during the design phase indicated that the scientific knowledge helped players understand why they were essentially reorganizing a grid. The mechanics themselves were confusing and unintuitive to new players. Like other scientific discovery games, the tutorial is the first section of the game that people interact with, but does ``juicy" design have implications here? Each version of POOP-SNOOP was tested with a prototypical tutorial.
 
+The content of the tutorials was designed to be identical; each tutorial had the same illustrations, same text, and the same order. Within the tutorial, players interacted with a small version of POOP-SNOOP. The ``juicy" version of the tutorial also contained the ``juicy" version of POOP-SNOOP and vice versa. The ``juicy" version was given some design thought. The placement of text, color, and overall feel was augmented to measure its effect on learning. One slide from both versions of the tutorial are shown in figure \ref{fig:tutorial}.
 
+\begin{figure}
+\begin{center}
+\includegraphics[width=150mm]{images/tutorial.pdf}
+\caption[Differences between tutorials in each prototype]{On the left and right, an example of the ``juicy" tutorial and ``juiceless" tutorial, respectively.}
+\label{fig:tutorial}
+\end{center}
+\end{figure}
 
+\subsection{Text}
 
+In order to entice players to read the text and digest the scientific concepts, text in the ``juicy" tutorial assumed the metaphor of speech bubbles being recited by an E. coli character. The intent of this design was that players would associate the character as guiding them in the tutorial. Special text effects should encourage player engagement. 
 
+\subsection{Animations}
 
-
-
-
-
+Both versions of the tutorial had the same content, but the ``juicy" version of the puzzle would often introduce content in a more appealing way. The DNA slide ``spun" into view and the lines indicating a ``match" were animated and bouncing. As POOP-SNOOP was introduced it gently slid down into the player's space, whereas the puzzle simply appeared in the ``juiceless" version.
